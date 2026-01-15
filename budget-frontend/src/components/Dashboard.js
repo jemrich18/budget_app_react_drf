@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { categoriesAPI, transactionsAPI } from '../services/api';
@@ -7,20 +7,20 @@ import { format } from 'date-fns';
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  
+
   const [summary, setSummary] = useState({ income: 0, expenses: 0, balance: 0 });
   const [categories, setCategories] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
-  
+
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     type: 'expense',
     color: '#3B82F6',
     description: ''
   });
-  
+
   const [transactionForm, setTransactionForm] = useState({
     category: '',
     amount: '',
@@ -28,11 +28,34 @@ const Dashboard = () => {
     date: format(new Date(), 'yyyy-MM-dd')
   });
 
-  useEffect(() => {
-    fetchData();
+  const fetchSummary = useCallback(async () => {
+    try {
+      const response = await transactionsAPI.getSummary();
+      setSummary(response.data);
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+    }
   }, []);
 
-  const fetchData = async () => {
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await categoriesAPI.getAll();
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }, []);
+
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const response = await transactionsAPI.getAll();
+      setTransactions(response.data);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
     try {
       await Promise.all([
         fetchSummary(),
@@ -42,34 +65,11 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
     }
-  };
+  }, [fetchSummary, fetchCategories, fetchTransactions]);
 
-  const fetchSummary = async () => {
-    try {
-      const response = await transactionsAPI.getSummary();
-      setSummary(response.data);
-    } catch (error) {
-      console.error('Error fetching summary:', error);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const response = await categoriesAPI.getAll();
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  const fetchTransactions = async () => {
-    try {
-      const response = await transactionsAPI.getAll();
-      setTransactions(response.data);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleLogout = async () => {
     await logout();
