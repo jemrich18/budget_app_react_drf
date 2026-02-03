@@ -3,6 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { categoriesAPI, transactionsAPI } from '../services/api';
 import { format } from 'date-fns';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -27,6 +28,8 @@ const Dashboard = () => {
     description: '',
     date: format(new Date(), 'yyyy-MM-dd')
   });
+
+  const [dateFilter, setDateFilter] = useState('all');
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -116,6 +119,46 @@ const Dashboard = () => {
     }
   };
 
+  const filteredTransactions = transactions.filter((trans) => {
+  if (dateFilter === 'all') return true;
+
+  const txDate = new Date(trans.date);
+  const now = new Date();
+
+  if (dateFilter === 'this_month') {
+    return (
+      txDate.getMonth() === now.getMonth() &&
+      txDate.getFullYear() === now.getFullYear()
+    );
+  }
+
+  if (dateFilter === 'last_month') {
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return (
+      txDate.getMonth() === lastMonth.getMonth() &&
+      txDate.getFullYear() === lastMonth.getFullYear()
+    );
+  }
+
+  return true;
+});
+
+// Build expenses-by-category data for chart
+const expensesByCategory = filteredTransactions
+  .filter((t) => t.category_type === 'expense')
+  .reduce((acc, t) => {
+    const key = t.category_name || 'Uncategorized';
+    acc[key] = (acc[key] || 0) + parseFloat(t.amount);
+    return acc;
+  }, {});
+
+const expenseChartData = Object.entries(expensesByCategory).map(([name, value]) => ({
+  name,
+  value,
+}));
+
+const chartColors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#6366F1', '#EC4899'];
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -146,6 +189,39 @@ const Dashboard = () => {
               ${summary.income.toFixed(2)}
             </p>
           </div>
+          {/* Expenses by Category Chart */}
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+            <h3 className="text-xl font-semibold mb-4">Expenses by category</h3>
+            {expenseChartData.length === 0 ? (
+              <p className="text-gray-500 text-sm">No expense data yet.</p>
+            ) : (
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={expenseChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      label
+                    >
+                      {expenseChartData.map((entry, index) => (
+                        <Cell
+                          key={entry.name}
+                          fill={chartColors[index % chartColors.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+        </div>
           
           <div className="bg-red-100 p-6 rounded-lg shadow">
             <h3 className="text-lg font-semibold text-red-800">Expenses</h3>
@@ -302,9 +378,21 @@ const Dashboard = () => {
           </div>
         </div>
 
+        
         {/* Recent Transactions */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-xl font-semibold mb-4">Recent Transactions</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Recent Transactions</h3>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="all">All time</option>
+              <option value="this_month">This month</option>
+              <option value="last_month">Last month</option>
+            </select>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -317,7 +405,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {transactions.slice(0, 10).map(trans => (
+                {filteredTransactions.slice(0, 10).map(trans => (
                   <tr key={trans.id} className="border-b">
                     <td className="px-4 py-2">{trans.date}</td>
                     <td className="px-4 py-2">
@@ -346,7 +434,7 @@ const Dashboard = () => {
               </tbody>
             </table>
             {transactions.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No transactions yet. Add a category first, then create a transaction!</p>
+              <p className="text-gray-500 text-center py-4">No transactions for this period. Try a different date filter or add a new transaction</p>
             )}
           </div>
         </div>

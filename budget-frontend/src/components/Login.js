@@ -80,6 +80,13 @@ const Login = () => {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        <p className="mt-3 text-xs text-gray-500 text-center">
+          Demo account:{' '}
+          <span className="font-mono">
+            demo_user / DemoPass123!
+          </span>{' '}
+          (sample data only, do not use real banking info)
+        </p>
 
         <p className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{' '}
@@ -87,6 +94,8 @@ const Login = () => {
             Register here
           </Link>
         </p>
+
+        
       </div>
     </div>
   );
