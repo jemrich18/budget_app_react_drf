@@ -25,7 +25,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest
+        python -m pytest
       env:
         SECRET_KEY: test-secret-key-for-ci
-        DEBUG: True
+        DEBUG: "True"
